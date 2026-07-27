@@ -54,13 +54,11 @@ export default function MainApp({ session, profile }) {
 
   if (loading) return <LoadingScreen />;
 
-  // ---------- nome do time ----------
   async function saveNomeTime(v) {
     setNomeTime(v);
     await supabase.from("team_settings").update({ nome_time: v }).eq("id", 1);
   }
 
-  // ---------- jogadores ----------
   async function addPlayer({ nome, numero, posicao, file }) {
     const { data, error } = await supabase.from("players").insert({ nome, numero, posicao }).select().single();
     if (error) return alert(error.message);
@@ -84,7 +82,6 @@ export default function MainApp({ session, profile }) {
     fetchAll();
   }
 
-  // ---------- partidas ----------
   async function addMatch({ data: dataJogo, adversario, local }) {
     await supabase.from("matches").insert({ data: dataJogo || null, adversario, local, presencas: {}, gols: {}, cartoes_amarelos: {}, cartoes_vermelhos: {} });
     fetchAll();
@@ -99,9 +96,135 @@ export default function MainApp({ session, profile }) {
     await supabase.from("matches").update({ [field]: next }).eq("id", matchRow.id);
   }
 
-  // ---------- patrocinadores ----------
   async function addSponsor(s) {
     await supabase.from("sponsors").insert(s);
     fetchAll();
   }
-  async function upd
+  async function updateSponsor(id, s) {
+    await supabase.from("sponsors").update(s).eq("id", id);
+    fetchAll();
+  }
+  async function removeSponsor(id) {
+    await supabase.from("sponsors").delete().eq("id", id);
+    fetchAll();
+  }
+
+  async function addExpense(g) {
+    await supabase.from("expenses").insert(g);
+    fetchAll();
+  }
+  async function removeExpense(id) {
+    await supabase.from("expenses").delete().eq("id", id);
+    fetchAll();
+  }
+
+  async function addOrder(o) {
+    await supabase.from("orders").insert(o);
+    fetchAll();
+  }
+  async function updateOrder(id, o) {
+    await supabase.from("orders").update(o).eq("id", id);
+    fetchAll();
+  }
+  async function removeOrder(id) {
+    await supabase.from("orders").delete().eq("id", id);
+    fetchAll();
+  }
+
+  async function setUserRole(id, role) {
+    await supabase.from("profiles").update({ role }).eq("id", id);
+    fetchAll();
+  }
+
+  const TABS = [
+    { id: "elenco", label: "Elenco", icon: Users },
+    { id: "partidas", label: "Partidas", icon: CalendarDays },
+    { id: "financeiro", label: "Patrocínio", icon: DollarSign },
+    { id: "gastos", label: "Gastos", icon: Receipt },
+    { id: "pedidos", label: "Pedidos", icon: ShoppingBag },
+    { id: "stats", label: "Estatísticas", icon: BarChart3 },
+    ...(isAdmin ? [{ id: "usuarios", label: "Usuários", icon: ShieldCheck }] : []),
+  ];
+
+  return (
+    <div className="min-h-screen" style={{ background: RED_DEEP, fontFamily: "Work Sans, sans-serif" }}>
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <div className="text-xs tracking-widest uppercase" style={{ color: MUTED_ON_RED, letterSpacing: 3 }}>
+              súmula digital · {isAdmin ? "admin" : "membro"}
+            </div>
+            {editingName && isAdmin ? (
+              <input
+                autoFocus
+                defaultValue={nomeTime}
+                onBlur={(e) => {
+                  saveNomeTime(e.target.value || nomeTime);
+                  setEditingName(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                className="bg-transparent border-b-2 outline-none w-full mt-1"
+                style={{ fontFamily: "Anton", color: "#fff", fontSize: 26, borderColor: "#fff" }}
+              />
+            ) : (
+              <button className="flex items-center gap-2 mt-1" onClick={() => isAdmin && setEditingName(true)}>
+                <h1 className="truncate" style={{ fontFamily: "Anton", color: "#fff", fontSize: 26 }}>{nomeTime}</h1>
+                {isAdmin && <Pencil size={14} color={MUTED_ON_RED} />}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0 ml-2">
+            <button onClick={() => exportarExcel({ nomeTime, players, matches, sponsors, expenses, orders })} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <Download size={16} color="#fff" />
+            </button>
+            <button onClick={() => supabase.auth.signOut()} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <LogOut size={16} color="#fff" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <StripeDivider />
+
+      <div className="flex overflow-x-auto gap-1 px-3 pt-3">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className="flex flex-col items-center gap-1 pb-2 pt-1 px-2 shrink-0"
+              style={{ minWidth: 68, borderBottom: active ? "3px solid #fff" : "3px solid transparent", color: active ? "#fff" : MUTED_ON_RED }}
+            >
+              <Icon size={17} />
+              <span className="text-[10px] font-medium whitespace-nowrap">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="px-4 pb-24 pt-4">
+        {tab === "elenco" && (
+          <ElencoTab players={players} isAdmin={isAdmin} onAdd={addPlayer} onUpdate={updatePlayer} onRemove={removePlayer} />
+        )}
+        {tab === "partidas" && (
+          <PartidasTab matches={matches} players={players} isAdmin={isAdmin} onAdd={addMatch} onRemove={removeMatch} onSetField={updateMatchField} />
+        )}
+        {tab === "financeiro" && (
+          <FinanceiroTab sponsors={sponsors} isAdmin={isAdmin} onAdd={addSponsor} onUpdate={updateSponsor} onRemove={removeSponsor} />
+        )}
+        {tab === "gastos" && (
+          <GastosTab expenses={expenses} isAdmin={isAdmin} onAdd={addExpense} onRemove={removeExpense} />
+        )}
+        {tab === "pedidos" && (
+          <PedidosTab orders={orders} players={players} isAdmin={isAdmin} onAdd={addOrder} onUpdate={updateOrder} onRemove={removeOrder} />
+        )}
+        {tab === "stats" && <EstatisticasTab players={players} matches={matches} />}
+        {tab === "usuarios" && isAdmin && (
+          <UsuariosTab profiles={profiles} currentUserId={session.user.id} onSetRole={setUserRole} />
+        )}
+      </div>
+    </div>
+  );
+}
