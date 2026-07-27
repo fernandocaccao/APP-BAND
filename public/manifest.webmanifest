@@ -1,0 +1,14 @@
+{
+  "name": "Súmula Digital",
+  "short_name": "Súmula",
+  "description": "Gestão do time de várzea: elenco, partidas, patrocínio, gastos e pedidos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#7A0E13",
+  "theme_color": "#7A0E13",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
